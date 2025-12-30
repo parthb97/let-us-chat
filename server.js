@@ -35,6 +35,10 @@ const validUsers = {
   harshidaben: "HNP@baldevbhai"
 };
 
+app.get("/_users", (req, res) => {
+  res.json({ users: Object.keys(validUsers) });
+});
+
 // ----- ROUTES -----
 
 // Show login page (index.html inside /public)
