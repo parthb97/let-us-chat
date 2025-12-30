@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Let Us Chat</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <style>
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(135deg, #0f172a, #1f2937);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: #ffffff;
+      border-radius: 18px;
+      overflow: hidden;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.18);
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh; /* ensures the whole card fits on screen */
+    }
+
+    header {
+      background: #111827;
+      color: #f9fafb;
+      padding: 10px 14px;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    header .title {
+      font-size: 16px;
+    }
+
+    header .right {
+      font-size: 11px;
+      opacity: 0.8;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    header a {
+      color: #e5e7eb;
+      text-decoration: none;
+      border: 1px solid rgba(229, 231, 235, 0.4);
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 10px;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 14px;
+      overflow-y: auto; /* scroll bar when content grows */
+      background: #f3f4f6;
+    }
+
+    .bubble {
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      max-width: 90%;
+    }
+
+    .bubble .name {
+      font-size: 12px;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .bubble .text {
+      font-size: 14px;
+      color: #111827;
+      word-wrap: break-word;
+    }
+
+    .top-form {
+      padding: 8px 10px 4px;
+      background: #e5e7eb;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      font-size: 12px;
+    }
+
+    .top-form input {
+      flex: 1;
+      padding: 6px 8px;
+      border-radius: 7px;
+      border: 1px solid #d1d5db;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .top-form span {
+      font-size: 11px;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+
+    form.send-form {
+      padding: 8px 10px 10px;
+      background: #e5e7eb;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+    }
+
+    #message {
+      padding: 8px 10px;
+      border-radius: 7px;
+      border: 1px solid #d1d5db;
+      font-size: 14px;
+      outline: none;
+    }
+
+    #message:focus {
+      border-color: #2563eb;
+      box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.3);
+    }
+
+    button {
+      padding: 8px 14px;
+      border-radius: 8px;
+      border: none;
+      background: #2563eb;
+      color: #fff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.05s;
+      white-space: nowrap;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+    <header>
+      <div class="title">Let Us Chat</div>
+      <div class="right">
+        <span>Logged in</span>
+        <a href="/logout">Logout</a>
+      </div>
+    </header>
+
+    <!-- Display name (NOT the login username) -->
+    <div class="top-form">
+      <span>Name in chat:</span>
+      <input
+        id="displayName"
+        type="text"
+        placeholder="How should others see you?"
+      />
+    </div>
+
+    <!-- Messages -->
+    <div id="chat"></div>
+
+    <!-- Send message -->
+    <form id="chat-form" class="send-form">
+      <input
+        id="message"
+        type="text"
+        placeholder="Type a message..."
+        autocomplete="off"
+      />
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+
+    const chat = document.getElementById("chat");
+    const form = document.getElementById("chat-form");
+    const msgInput = document.getElementById("message");
+    const displayNameInput = document.getElementById("displayName");
+
+    // Color palette for names
+    const nameColors = [
+      "#2563eb",
+      "#dc2626",
+      "#059669",
+      "#7c3aed",
+      "#d97706",
+      "#0ea5e9",
+      "#e11d48",
+      "#16a34a",
+    ];
+
+    // Always return same color for same display name
+    function getColorForName(name) {
+      let hash = 0;
+      for (let i = 0; i < name.length; i++) {
+        hash = name.charCodeAt(i) + ((hash << 5) - hash);
+      }
+      return nameColors[Math.abs(hash) % nameColors.length];
+    }
+
+    function addMessage({ displayName, message }) {
+      const div = document.createElement("div");
+      div.className = "bubble";
+
+      const safeName = displayName || "Guest";
+      const safeMsg = message || "";
+
+      div.innerHTML = `
+        <div class="name" style="color:${getColorForName(safeName)}">
+          ${safeName}
+        </div>
+        <div class="text">${safeMsg}</div>
+      `;
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    // Receive from server
+    socket.on("chat-message", addMessage);
+
+    // Send to server
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+
+      const displayName = displayNameInput.value.trim() || "Guest";
+      const message = msgInput.value.trim();
+      if (!message) return;
+
+      socket.emit("chat-message", { displayName, message });
+
+      msgInput.value = "";
+      msgInput.focus();
+    });
+  </script>
+</body>
+</html>
