@@ -24,12 +24,16 @@ app.use(
   })
 );
 
-// ----- PREDEFINED USERS -----
-// PBuser_1 / PloveP_1 ... PBuser_10 / PloveP_10
-const validUsers = {};
-for (let i = 1; i <= 10; i++) {
-  validUsers[`PBuser_${i}`] = `PloveP_${i}`;
-}
+// ---- PREDEFINED USERS ----
+const validUsers = {
+  parth: "PKB@kamalbhai",
+  priyanka: "PNP@nareshbhai",
+  yash: "YNP@nareshbhai",
+  kamalbhai: "KVB@virjibhai",
+  nareshbhai: "NMP@manekbhai",
+  hansaben: "HKB@rambhai",
+  harshidaben: "HNP@baldevbhai"
+};
 
 // ----- ROUTES -----
 
